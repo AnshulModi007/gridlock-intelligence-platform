@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+*.env
+.env
+streamlit_err.txt
+*.csv
+fine_recovery_block.txt
+optimizer_block.txt
+pdf_block.txt
