@@ -10,7 +10,12 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from scipy.optimize import linprog
-from prophet import Prophet
+try:
+    from prophet import Prophet          # heavy dep; app falls back to polynomial if unavailable
+    _HAS_PROPHET = True
+except Exception:
+    Prophet = None
+    _HAS_PROPHET = False
 from fpdf import FPDF
 from groq import Groq
 import io as _io
@@ -566,7 +571,8 @@ div[data-testid="stDataFrame"] {
 """, unsafe_allow_html=True)
 
 # â"€â"€ Constants â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-DATA_PATH = r"jan to may police violation_anonymized791b166.csv"
+DATA_PARQUET = "data.parquet"
+DATA_PATH    = r"jan to may police violation_anonymized791b166.csv"
 
 SEVERITY_MAP = {
     "PARKING NEAR ROAD CROSSING": 1.0,
@@ -607,7 +613,11 @@ CHART_PAL   = ["#00C2D4","#8B5CF6","#F59E0B","#10B981","#38BDF8","#F472B6","#A78
 # â"€â"€ Data loading â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 @st.cache_data(show_spinner="Loading 298k violation recordsâ€¦")
 def load_data():
-    df = pd.read_csv(DATA_PATH)
+    # Prefer the compact parquet (used on Streamlit Cloud); fall back to raw CSV locally
+    if _os.path.exists(DATA_PARQUET):
+        df = pd.read_parquet(DATA_PARQUET)
+    else:
+        df = pd.read_csv(DATA_PATH)
     df["created_datetime"] = pd.to_datetime(df["created_datetime"], format="mixed", utc=True)
     df["hour"]       = df["created_datetime"].dt.hour
     df["dow"]        = df["created_datetime"].dt.dayofweek
